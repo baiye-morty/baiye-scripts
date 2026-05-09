@@ -115,8 +115,8 @@ section "duf / tldr / lazydocker"
 # duf（现代 df）
 if ! command -v duf &>/dev/null; then
   DUF_VER=$(curl -fsSL https://api.github.com/repos/muesli/duf/releases/latest | jq -r '.tag_name' | tr -d 'v')
-  curl -fsSL "https://github.com/muesli/duf/releases/latest/download/duf_${DUF_VER}_linux_amd64.deb" -o /tmp/duf.deb
-  dpkg -i /tmp/duf.deb && rm /tmp/duf.deb
+  curl -fsSL "https://github.com/muesli/duf/releases/latest/download/duf_${DUF_VER}_linux_amd64.tar.gz" -o /tmp/duf.tar.gz
+  tar -xzf /tmp/duf.tar.gz -C /usr/local/bin duf && rm /tmp/duf.tar.gz
   success "duf 安装完成"
 fi
 
@@ -228,15 +228,21 @@ if [[ -n "$SSH_PUBKEY" ]]; then
 fi
 
 # 禁用密码登录
-sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-# 禁止 root 密码登录（保留密钥登录）
-sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
-systemctl reload sshd
-success "SSH 密码登录已禁用"
+if [[ "$IS_CI" == "true" ]]; then
+  warn "CI 模式：跳过 SSH 加固"
+else
+  sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+  sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+  systemctl reload sshd
+  success "SSH 密码登录已禁用"
+fi
 
 # ── 9. fail2ban ──────────────────────────────────────────────────────────────
 section "fail2ban"
-cat > /etc/fail2ban/jail.local << 'EOF'
+if [[ "$IS_CI" == "true" ]]; then
+  warn "CI 模式：跳过 fail2ban 启动"
+else
+  cat > /etc/fail2ban/jail.local << 'EOF'
 [sshd]
 enabled  = true
 port     = 22
@@ -244,8 +250,9 @@ maxretry = 5
 findtime = 600
 bantime  = 3600
 EOF
-systemctl enable --now fail2ban
-success "fail2ban 已启动，SSH 10分钟内失败5次封禁1小时"
+  systemctl enable --now fail2ban
+  success "fail2ban 已启动，SSH 10分钟内失败5次封禁1小时"
+fi
 
 # ── 10. zsh 配置 ─────────────────────────────────────────────────────────────
 section "zsh 配置"
@@ -299,7 +306,9 @@ fi
 ZSHRC
 
 # 设置默认 shell 为 zsh
-chsh -s "$(which zsh)" root
+if [[ "$IS_CI" != "true" ]]; then
+  chsh -s "$(which zsh)" root
+fi
 success "zsh 配置完成"
 
 # ── 11. tmux 配置 ────────────────────────────────────────────────────────────
