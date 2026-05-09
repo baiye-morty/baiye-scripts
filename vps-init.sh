@@ -115,7 +115,7 @@ section "duf / tldr / lazydocker"
 # duf（现代 df）
 if ! command -v duf &>/dev/null; then
   DUF_VER=$(curl -fsSL https://api.github.com/repos/muesli/duf/releases/latest | jq -r '.tag_name' | tr -d 'v')
-  curl -fsSL "https://github.com/muesli/duf/releases/latest/download/duf_${DUF_VER}_linux_amd64.tar.gz" -o /tmp/duf.tar.gz
+  curl -fsSL "https://github.com/muesli/duf/releases/latest/download/duf_${DUF_VER}_linux_x86_64.tar.gz" -o /tmp/duf.tar.gz
   tar -xzf /tmp/duf.tar.gz -C /usr/local/bin duf && rm /tmp/duf.tar.gz
   success "duf 安装完成"
 fi

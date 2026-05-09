@@ -41,7 +41,7 @@ jobs:
 
       - name: Install prerequisites (RHEL/Fedora)
         if: contains(matrix.image, 'rocky') || contains(matrix.image, 'fedora')
-        run: dnf install -y -q curl git
+        run: dnf install -y -q --allowerasing curl git
 
       - name: Run vps-init.sh (CI mode)
         env:
