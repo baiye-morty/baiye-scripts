@@ -1,0 +1,57 @@
+name: Test vps-init.sh
+
+on:
+  push:
+    paths:
+      - "vps-init.sh"
+      - ".github/workflows/test.yml"
+  pull_request:
+    paths:
+      - "vps-init.sh"
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: ${{ matrix.distro }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu-22.04
+            image: ubuntu:22.04
+          - distro: debian-12
+            image: debian:12
+          - distro: rockylinux-9
+            image: rockylinux:9
+          - distro: fedora-latest
+            image: fedora:latest
+
+    container:
+      image: ${{ matrix.image }}
+      options: --user root
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install prerequisites (Debian/Ubuntu)
+        if: contains(matrix.image, 'ubuntu') || contains(matrix.image, 'debian')
+        run: apt-get update -qq && apt-get install -y -qq sudo curl git
+
+      - name: Install prerequisites (RHEL/Fedora)
+        if: contains(matrix.image, 'rocky') || contains(matrix.image, 'fedora')
+        run: dnf install -y -q sudo curl git
+
+      - name: Run vps-init.sh (CI mode)
+        env:
+          CI: "true"
+        run: bash vps-init.sh
+
+      - name: Verify tools installed
+        run: |
+          set -e
+          for cmd in git curl wget jq vim tmux zsh fzf rg; do
+            command -v "$cmd" || { echo "MISSING: $cmd"; exit 1; }
+          done
+          echo "All required tools present"
